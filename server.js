@@ -1,14 +1,19 @@
 const express = require('express');
-const cors = require('cors');
 const ytdl = require('@distube/ytdl-core');
 
 const app = express();
 
-// すべての接続元からのアクセスを安全に許可（CORS対応）
-app.use(cors({
-    origin: '*',
-    exposedHeaders: ['Content-Disposition']
-}));
+// ローカルファイル（origin 'null'）からのアクセスや、すべてのCORSブロックを完全に防ぐ手動ミドルウェア
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range');
+    res.header('Access-Control-Expose-Headers', 'Content-Disposition');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 app.get('/download', async (req, res) => {
     const videoURL = req.query.url;
@@ -20,7 +25,6 @@ app.get('/download', async (req, res) => {
         const info = await ytdl.getInfo(videoURL);
         const title = info.videoDetails.title.replace(/[^\w\s]/gi, '') || 'video';
 
-        // ダウンロードヘッダーの設定
         res.header('Content-Disposition', `attachment; filename="${title}.mp4"`);
         res.header('Content-Type', 'video/mp4');
 
